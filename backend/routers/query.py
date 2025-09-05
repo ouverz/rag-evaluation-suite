@@ -125,7 +125,7 @@ async def query_endpoint(req: QueryRequest, container: AppContainer = Depends(ap
             metadata = row.get("metadata", {})
             
             # Extract true hybrid score components
-            hybrid_score = round(metadata.get("hybrid_score", metadata.get("score", 0.0)), 4)
+            hybrid_score = round(metadata.get("rrf_score", metadata.get("hybrid_score", metadata.get("score", 0.0))), 4)
             bm25_score = round(metadata.get("bm25_score", 0.0), 4)
             vector_score = round(metadata.get("vector_score", 0.0), 4)
             vector_similarity = round(metadata.get("vector_similarity", 0.0), 4) if metadata.get("vector_similarity") else None
