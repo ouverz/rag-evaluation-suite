@@ -283,6 +283,13 @@ class CacheService:
             else:
                 return False
             
+            # Also clear evaluation metrics cache for 'queries' and 'all' types
+            if cache_type in ['queries', 'all']:
+                eval_keys = self.redis_client.keys("eval_metrics:*")
+                if eval_keys:
+                    self.redis_client.delete(*eval_keys)
+                    logger.info(f"Cleared {len(eval_keys)} evaluation metrics cache entries")
+            
             if keys:
                 self.redis_client.delete(*keys)
                 logger.info(f"Cleared {len(keys)} {cache_type} cache entries")

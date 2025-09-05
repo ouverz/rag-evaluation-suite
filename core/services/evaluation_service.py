@@ -58,8 +58,9 @@ class EvaluationService:
                 except:
                     metadata = {}
             
-            score = metadata.get("hybrid_score", 
-                               metadata.get("score", 0.0))
+            score = metadata.get("rrf_score", 
+                               metadata.get("hybrid_score", 
+                               metadata.get("score", 0.0)))
             content_parts.append(f"{doc_id}:{score}")
         
         content = "|".join(content_parts)
