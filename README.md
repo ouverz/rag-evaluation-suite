@@ -2,7 +2,7 @@
 
 Answer questions grounded in your own documents — not hallucinated from model weights. A production-ready RAG system built with hybrid search, intelligent caching, and a multi-LLM backend.
 
-Built with modern Python AI tooling: **Pydantic AI**, **TimescaleDB + pgvector**, **Redis**, and support for both **OpenAI** and **Anthropic Claude**.
+Built with modern Python AI tooling: **Pydantic AI**, **TimescaleDB + pgvector**, **Redis**, **Languse / RAGAS ** and support for both **OpenAI** and **Anthropic Claude**.
 
 ---
 
@@ -70,6 +70,7 @@ Frontend (Streamlit) → Backend (FastAPI) → Core Logic → Infrastructure
 - **Core**: Business logic for document processing and hybrid search
 - **Cache**: Redis-powered caching (99.8% query speedup)
 - **Database**: TimescaleDB with pgvector for scalable vector storage
+- **Evaluation & Observability **: RAGAS Framework, Langfuse
 
 ---
 
