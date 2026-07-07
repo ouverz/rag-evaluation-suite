@@ -6,7 +6,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.util import get_remote_address
 from slowapi.errors import RateLimitExceeded
-from backend.routers import query, ingest, init, cache
+from backend.routers import query, ingest, init, cache, evaluate
 from backend.dependencies import app_container
 from backend.security import load_api_keys
 from fastapi import Depends
@@ -158,3 +158,4 @@ app.include_router(init.router, prefix="/init", tags=["init"])
 app.include_router(query.router, prefix="/query", tags=["query"])
 app.include_router(ingest.router, prefix="/ingest", tags=["ingest"])
 app.include_router(cache.router, prefix="/cache", tags=["cache"])
+app.include_router(evaluate.router, prefix="/evaluate", tags=["evaluate"])
