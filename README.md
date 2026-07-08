@@ -1,4 +1,6 @@
-# Retrieval-Augmented Generation Application
+# Production RAG Application with Evaluation Suite
+
+A production-shaped Retrieval-Augmented Generation system with hybrid search, multi-LLM support, Langfuse observability, Redis caching, and a RAGAS-based evaluation harness for measuring answer quality.
 
 Answer questions grounded in your own documents — not hallucinated from model weights. A production-ready RAG system built with hybrid search, intelligent caching, and a multi-LLM backend.
 
