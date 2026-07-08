@@ -1,39 +1,64 @@
 # RAGAS Evaluation Guide
 
-Automated quality scoring for RAG responses using [RAGAS](https://docs.ragas.io) with Langfuse observability.
+This project now includes a real RAGAS evaluation surface for answer quality and retrieval quality.
+
+The evaluation suite is intentionally separate from the retrieval/RRF tests:
+
+- **RRF tests** prove the hybrid retrieval fusion logic behaves correctly.
+- **RAGAS evaluation** scores generated RAG answers against retrieved context and optional ground-truth references.
 
 ---
 
 ## Metrics
 
-All scores are on a **0.0–1.0 scale**. Higher is better.
+All scores use a **0.0–1.0** scale. Higher is better.
 
 | Metric | What it measures | Ground truth needed? |
-|--------|-----------------|---------------------|
-| **Faithfulness** | Answer stays within the retrieved context — no hallucinations | No |
-| **Answer Relevancy** | Answer directly addresses the question | No |
-| **Context Precision** | Retrieved chunks are relevant to the expected answer | Yes (`reference`) |
-| **Context Recall** | All necessary information was retrieved | Yes (`reference`) |
+|---|---|---|
+| `faithfulness` | Whether the answer stays grounded in retrieved context | No |
+| `answer_relevancy` | Whether the answer addresses the question | No |
+| `context_precision` | Whether retrieved chunks are relevant to the reference answer | Yes |
+| `context_recall` | Whether retrieved chunks contain the information needed by the reference answer | Yes |
+| `overall` | Average of available metrics | Depends on supplied metrics |
 
-Omit `reference` (or pass `""`) to score only faithfulness and answer relevancy.
+If `reference` is omitted or empty, the evaluator runs only `faithfulness` and `answer_relevancy`.
+
+---
+
+## Dependencies
+
+The evaluation layer uses optional runtime dependencies now listed in `pyproject.toml`:
+
+- `ragas`
+- `datasets`
+- `langchain-openai`
+
+The app can still report evaluation availability through `/evaluate/status` if dependencies or credentials are missing.
 
 ---
 
 ## REST API
 
-All endpoints require the `X-API-Key` header when API keys are configured.
+All endpoints use `X-API-Key` when `RAG_API_KEYS` is configured.
 
-### Check availability
+### Check status
 
 ```bash
 curl -H "X-API-Key: your-key" http://localhost:8000/evaluate/status
 ```
 
+Example response:
+
 ```json
-{"available": true, "module": "ragas", "metrics": ["faithfulness", "answer_relevancy", "context_precision", "context_recall"]}
+{
+  "available": true,
+  "module": "ragas",
+  "metrics": ["faithfulness", "answer_relevancy", "context_precision", "context_recall"],
+  "reason": null
+}
 ```
 
-### Evaluate a single response
+### Evaluate one response
 
 ```bash
 curl -X POST http://localhost:8000/evaluate \
@@ -41,36 +66,16 @@ curl -X POST http://localhost:8000/evaluate \
   -H "X-API-Key: your-key" \
   -d '{
     "question": "What are the benefits of bedtime routines?",
-    "answer": "Bedtime routines improve sleep duration and reduce onset latency.",
+    "answer": "Consistent bedtime routines can improve sleep outcomes.",
     "contexts": [
-      "A nightly bedtime routine was associated with improved sleep outcomes.",
-      "Children with routines showed better emotional regulation."
+      "A nightly bedtime routine was associated with improved sleep outcomes."
     ],
     "reference": "Consistent bedtime routines improve sleep outcomes in young children.",
     "use_cache": true
   }'
 ```
 
-```json
-{
-  "scores": {
-    "faithfulness": 0.92,
-    "answer_relevancy": 0.87,
-    "context_precision": 0.85,
-    "context_recall": 0.78,
-    "overall": 0.855
-  },
-  "question": "What are the benefits of bedtime routines?",
-  "answer_preview": "Bedtime routines improve sleep duration...",
-  "num_contexts": 2,
-  "evaluation_time_ms": 3240,
-  "metadata": {"cache_hit": false}
-}
-```
-
 ### Evaluate a batch
-
-Samples run concurrently via `asyncio.gather`.
 
 ```bash
 curl -X POST http://localhost:8000/evaluate/batch \
@@ -78,13 +83,15 @@ curl -X POST http://localhost:8000/evaluate/batch \
   -H "X-API-Key: your-key" \
   -d '{
     "samples": [
-      {"question": "q1", "answer": "a1", "contexts": ["c1"], "reference": "r1"},
-      {"question": "q2", "answer": "a2", "contexts": ["c2"], "reference": "r2"}
+      {
+        "question": "q1",
+        "answer": "a1",
+        "contexts": ["ctx1"],
+        "reference": "r1"
+      }
     ]
   }'
 ```
-
-Response includes per-sample results and an aggregate `summary` block with averages across all metrics.
 
 ---
 
@@ -94,125 +101,82 @@ Response includes per-sample results and an aggregate `summary` block with avera
 import asyncio
 from core.evaluation.evaluator import RAGASEvaluator
 
-evaluator = RAGASEvaluator()
+async def main():
+    evaluator = RAGASEvaluator()
+    result = await evaluator.evaluate(
+        question="What improves toddler sleep?",
+        answer="Consistent bedtime routines can improve sleep outcomes.",
+        contexts=["A consistent bedtime routine was associated with improved sleep outcomes."],
+        reference="Consistent bedtime routines improve sleep outcomes.",
+    )
+    print(result.scores.to_dict())
 
-# Single evaluation
-result = asyncio.run(evaluator.evaluate(
-    question="What causes poor sleep in toddlers?",
-    answer="Irregular bedtime routines are a leading cause.",
-    contexts=["Studies show irregular routines disrupt sleep patterns."],
-    reference="Inconsistent bedtime routines are associated with poor sleep.",
-))
-print(result.scores.to_dict())
-# {'faithfulness': 0.91, 'answer_relevancy': 0.88, 'context_precision': 0.84, 'context_recall': 0.79}
-
-# Batch evaluation
-results = asyncio.run(evaluator.evaluate_batch([
-    {"question": "q1", "answer": "a1", "contexts": ["c1"], "reference": "r1"},
-    {"question": "q2", "answer": "a2", "contexts": ["c2"], "reference": "r2"},
-]))
-summary = evaluator.get_summary(results)
-print(summary["avg_overall"])
+asyncio.run(main())
 ```
+
+---
+
+## Golden dataset
+
+A starter golden dataset lives at:
+
+```text
+data/eval/bedtime_routines_golden.json
+```
+
+Each record contains:
+
+```json
+{
+  "question": "...",
+  "reference": "...",
+  "expected_source": "optional source document"
+}
+```
+
+The current dataset is deliberately small. It is useful as a smoke benchmark and should be expanded before claiming robust answer-quality coverage.
 
 ---
 
 ## Benchmark CLI
 
-Queries the live RAG system and evaluates every response with RAGAS.
+The CLI queries the live `/query` endpoint, sends the generated answer and retrieved contexts to `/evaluate`, then writes JSON and optional Markdown reports.
 
-**Requirements:** application must be running (`python start_app.py`) and initialised (`POST /init`).
+Requirements:
+
+1. Application running: `python start_app.py`
+2. System initialised: `POST /init`
+3. `OPENAI_API_KEY` set for RAGAS judge calls
 
 ```bash
-# Generate a test dataset from your documents (uses gpt-4o-mini)
 python scripts/benchmark_ragas.py \
-  --generate \
-  --docs data/documents/ \
-  --size 20
-
-# Run the benchmark against an existing dataset
-python scripts/benchmark_ragas.py \
-  --dataset data/test_dataset.json \
+  --dataset data/eval/bedtime_routines_golden.json \
   --top-k 5 \
-  --output results/benchmark.json
-
-# Generate and run in one command
-python scripts/benchmark_ragas.py \
-  --generate --docs data/documents/ --size 20 \
-  --output results/benchmark.json
-```
-
-Example output:
-
-```
-============================================================
-RAGAS BENCHMARK RESULTS
-============================================================
-Timestamp:     2026-06-01 00:00:00
-RAGAS version: 0.4.3
-Questions:     20 | Success: 19 | Failed: 1
-------------------------------------------------------------
-Metric                     Avg    Min    Max
-------------------------------------------------------------
-Faithfulness             0.871  0.620  1.000
-Answer Relevancy         0.834  0.710  0.950
-Context Precision        0.812  0.500  1.000
-Context Recall           0.756  0.430  0.920
-------------------------------------------------------------
-Overall                  0.818
-Avg eval time            3140ms
-============================================================
+  --output results/ragas-benchmark.json \
+  --markdown results/ragas-benchmark.md
 ```
 
 ---
 
 ## Caching
 
-Evaluation results are cached in-process with a bounded LRU cache (512 entries), keyed on question + answer. This avoids redundant LLM-as-judge calls for repeated evaluations.
+`RAGASEvaluator` keeps a bounded in-process LRU cache keyed by:
 
-Pass `"use_cache": false` in the request body to bypass.
+- question
+- answer
+- contexts
+- reference
+- metric set
 
----
-
-## Langfuse Observability
-
-When `LANGFUSE_ENABLED=true`, every evaluation call is traced and RAGAS scores are pushed into the Langfuse timeline. The app runs fully without it.
-
-```bash
-# .env
-LANGFUSE_ENABLED=true
-LANGFUSE_PUBLIC_KEY=pk-lf-...
-LANGFUSE_SECRET_KEY=sk-lf-...
-LANGFUSE_HOST=https://cloud.langfuse.com
-```
+Use `"use_cache": false` to force a fresh judge call.
 
 ---
 
-## Configuration
+## Portfolio interpretation
 
-| Variable | Default | Description |
-|----------|---------|-------------|
-| `OPENAI_API_KEY` | required | Used by RAGAS as the LLM judge |
-| `LANGFUSE_ENABLED` | `false` | Enable/disable Langfuse tracing |
-| `LANGFUSE_PUBLIC_KEY` | — | Langfuse project public key |
-| `LANGFUSE_SECRET_KEY` | — | Langfuse project secret key |
-| `LANGFUSE_HOST` | `https://cloud.langfuse.com` | Langfuse instance URL |
+This suite gives the project two evaluation layers:
 
-The judge model is `gpt-4o-mini` (faster and cheaper than `gpt-4o`, configured in `config/settings.py`).
+1. **Retrieval mechanics** — deterministic tests for RRF and hybrid search behavior.
+2. **Answer quality** — RAGAS scoring for faithfulness, relevancy, context precision, and context recall.
 
----
-
-## Troubleshooting
-
-**Evaluation returns zeros**
-- `GET /evaluate/status` must return `"available": true`
-- Run `uv sync` to confirm `ragas` and `langchain-openai` are installed
-- Verify `OPENAI_API_KEY` is set
-
-**`context_precision` / `context_recall` are 0.0**
-- These metrics require a non-empty `reference` (ground truth answer)
-
-**Slow evaluation**
-- Each metric makes one OpenAI API call (~2–5 s total per evaluation)
-- Enable caching (`"use_cache": true`) to skip repeated pairs
-- Use the batch endpoint for multiple evaluations — they run concurrently
+That combination is stronger than a demo because it tests both *what gets retrieved* and *what the model says with it*.

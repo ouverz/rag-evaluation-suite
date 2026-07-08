@@ -95,9 +95,14 @@ Frontend (Streamlit) → Backend (FastAPI) → Core Logic → Infrastructure
 - **Error Handling**: Robust error recovery and logging
 - **Docker Integration**: One-command infrastructure deployment
 
-### 🧪 RAGAS Quality Evaluation
+### 🧪 Retrieval + RAGAS Quality Evaluation
 
-Automated scoring of every RAG response across four metrics (0.0–1.0 scale):
+This repo now has two evaluation layers:
+
+1. **Retrieval mechanics tests** for RRF / hybrid search behavior.
+2. **RAGAS answer-quality evaluation** for generated RAG responses.
+
+The RAGAS suite scores responses across four metrics (0.0–1.0 scale):
 
 | Metric | What it measures | Ground truth needed? |
 |--------|-----------------|---------------------|
@@ -106,7 +111,7 @@ Automated scoring of every RAG response across four metrics (0.0–1.0 scale):
 | Context Precision | Retrieved chunks are relevant to the answer | Yes |
 | Context Recall | All necessary chunks were retrieved | Yes |
 
-Scores are exposed via REST API and a benchmark CLI. Powered by `gpt-4o-mini` as judge — results are LRU-cached to avoid redundant API calls.
+Scores are exposed via REST API and a benchmark CLI. A starter golden dataset lives at `data/eval/bedtime_routines_golden.json`. Powered by `gpt-4o-mini` as judge — repeated evaluations are LRU-cached to avoid redundant API calls.
 
 ```bash
 curl -X POST http://localhost:8000/evaluate \

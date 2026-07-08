@@ -1,0 +1,27 @@
+[
+  {
+    "question": "What are the benefits of consistent bedtime routines for young children?",
+    "reference": "Consistent bedtime routines are associated with better sleep outcomes for young children, including improved sleep duration and bedtime behavior.",
+    "expected_source": "A Nightly Bedtime Routine- Impact on Sleep in Young Children and Maternal Mood.pdf"
+  },
+  {
+    "question": "How can bedtime routines affect maternal mood?",
+    "reference": "Bedtime routines can improve child sleep, which may reduce bedtime difficulties and support better maternal mood or reduced maternal stress.",
+    "expected_source": "A Nightly Bedtime Routine- Impact on Sleep in Young Children and Maternal Mood.pdf"
+  },
+  {
+    "question": "What factors are associated with toddler nighttime sleep duration?",
+    "reference": "Toddler nighttime sleep duration is associated with bedtime routine consistency and household or maternal factors discussed in the sleep literature.",
+    "expected_source": "Toddler Bedtime Routines and Associations With Nighttime Sleep Duration and Maternal and Household Factors.pdf"
+  },
+  {
+    "question": "What is self-soothing in infant sleep research?",
+    "reference": "Self-soothing refers to an infant's ability to settle or return to sleep independently during nighttime sleep-wake patterns.",
+    "expected_source": "Nighttime sleep-wake patterns and self-soothing from birth to one year of age- a longitudinal intervention study.pdf"
+  },
+  {
+    "question": "How is infant sleep related to cognition and growth?",
+    "reference": "Infant sleep is studied in relation to cognitive development and physical growth, with sleep patterns considered an important developmental factor.",
+    "expected_source": "InfantSleepAndItsRelationWithCognitionandGrowth.pdf"
+  }
+]
